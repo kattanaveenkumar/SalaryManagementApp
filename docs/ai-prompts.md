@@ -93,6 +93,48 @@ Outputs reviewed:
 
 ---
 
+## Phase 6 — Frontend
+
+**Prompt intent:** Build a production-grade Next.js 14 UI using the established API surface, not a demo.
+
+Outputs reviewed:
+- `useEmployees` / `useInsights` hooks with cancellation tokens (`cancelled` flag) — prevents state updates on unmounted components
+- `employeeApi` / `insightsApi` service layer — single `request<T>()` function centralises error handling and JSON decoding
+- `EmployeeForm` — controlled inputs, submit-lock during async, error display from API response
+- `EmployeeFilters` — debounce-free design; user presses Apply or Enter (appropriate for a data tool, not a search box)
+- All insight components receive typed props and render currency via `formatCurrency` (shared `Intl.NumberFormat` instance)
+- `Pagination` — computes `start/end` from `meta`, disables Prev/Next at boundaries
+
+**Human decision made here:** Client-side country filter in `JobTitleInsights` (instant, no extra API call — data already loaded); standalone `LoadingSpinner` and `ErrorBanner` as shared primitives rather than inline states.
+
+---
+
+## Phase 7 — Tests
+
+**Prompt intent:** Full test coverage with no mocking of the database (backend) and no real network calls (frontend).
+
+Backend (109 examples, 100% line coverage):
+- `spec/models/employee_spec.rb` — Shoulda matchers for every validation + scope behaviour
+- `spec/serializers/employee_serializer_spec.rb` — field shape, Float type, ISO 8601 timestamps
+- `spec/services/employees/{create,update,list}_service_spec.rb` — success/failure results, pagination caps
+- `spec/services/insights/salary_insights_service_spec.rb` — all 4 aggregation methods with real SQL against test DB
+- `spec/requests/health_spec.rb` — smoke test
+- `spec/requests/api/v1/{employees,insights}_spec.rb` — full request cycle: filters, pagination, 404s, 422s
+
+Frontend (88 tests, 15 suites):
+- `lib/format.test.ts` — currency formatting edge cases
+- `services/api.test.ts` — fetch mock verifies URL construction, method, body, error parsing
+- `hooks/useEmployees.test.ts` / `useInsights.test.ts` — mock API, verify loading→data→error state transitions
+- All 10 components tested for render, user interaction, and accessibility attributes
+
+**Bug found and fixed:** `ROUND(PERCENTILE_CONT(...)::numeric, 2)` — PostgreSQL 12 lacks `ROUND(double precision, integer)`; explicit `::numeric` cast required. The test suite caught this before any human noticed.
+
+**Environment issues resolved:**
+- `@next/swc` native binary causes SIGBUS on this CPU; Jest config switched to `babel-jest` with Next.js bundled presets
+- Ruby 3.2.2 installed via RVM; postgres user password set to match `database.yml` defaults
+
+---
+
 ## What Was NOT Delegated to AI
 
 - Technology selection (PostgreSQL, Rails, Next.js) — human decision

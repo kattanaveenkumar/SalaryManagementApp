@@ -16,10 +16,10 @@ module Insights
     SALARY_PERCENTILES_SQL = <<~SQL.freeze
       SELECT
         country,
-        ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY salary), 2) AS p25,
-        ROUND(PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY salary), 2) AS p50,
-        ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY salary), 2) AS p75,
-        ROUND(PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY salary), 2) AS p90
+        ROUND(PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY salary)::numeric, 2) AS p25,
+        ROUND(PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY salary)::numeric, 2) AS p50,
+        ROUND(PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY salary)::numeric, 2) AS p75,
+        ROUND(PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY salary)::numeric, 2) AS p90
       FROM employees
       GROUP BY country
       ORDER BY country ASC
