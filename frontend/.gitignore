@@ -1,0 +1,6 @@
+node_modules/
+.next/
+coverage/
+.env.local
+.env.production.local
+next-env.d.ts
