@@ -4,7 +4,10 @@ WORKDIR /app
 RUN apk add --no-cache build-base postgresql-dev
 
 COPY Gemfile Gemfile.lock ./
+# force_ruby_platform: compile all native gems from source so pre-built
+# glibc binaries (x86_64-linux) are not used on Alpine's musl libc.
 RUN bundle config set --local without "development test" \
+ && bundle config set --local force_ruby_platform true \
  && bundle install --jobs 4 --retry 3
 
 # Stage 2: Production image (no build tools)
