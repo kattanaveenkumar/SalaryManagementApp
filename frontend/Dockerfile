@@ -10,8 +10,12 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-ARG NEXT_PUBLIC_API_URL=http://backend:3000
+# NEXT_PUBLIC_API_URL: leave empty so all fetches use relative URLs and are
+# proxied server-side via the rewrite in next.config.js → BACKEND_URL.
+ARG NEXT_PUBLIC_API_URL=""
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ARG BACKEND_URL=http://backend:3000
+ENV BACKEND_URL=$BACKEND_URL
 RUN npm run build
 
 # Stage 3: Production runtime (minimal image — no dev deps, no source)

@@ -135,6 +135,23 @@ Frontend (88 tests, 15 suites):
 
 ---
 
+## Phase 8 — Docker / Deployment
+
+**Prompt intent:** Zero-step startup — `docker compose up --build` is the complete workflow.
+
+Outputs reviewed:
+- `backend/Dockerfile` — two-stage build (gem install → stripped runtime image); non-root `rails` user; alpine base for minimal attack surface
+- `docker-compose.yml` — three services (db, backend, frontend) with explicit `depends_on` health checks; named volume `pg_data` persists data across restarts
+- `frontend/Dockerfile` — updated `NEXT_PUBLIC_API_URL` to empty and added `BACKEND_URL` build arg; browser fetches use relative paths, Next.js server proxies them to the backend Docker service name
+- `frontend/next.config.js` — added `rewrites()` block: `/api/*` and `/health` proxied server-side to `BACKEND_URL` (defaulting to `http://localhost:3000` for local dev)
+- `.dockerignore` files for both services — exclude test files, coverage, and local artefacts from the build context
+
+**Key architectural decision:** Client-side fetches cannot resolve `http://backend:3000` because the browser has no access to Docker's internal DNS. Instead of exposing a hardcoded `localhost` URL as a build-time constant (brittle), the frontend proxies all `/api/*` traffic through the Next.js standalone server, which runs inside the Docker network and can resolve `backend` by service name.
+
+**Human decision made here:** Named volume over bind-mount for Postgres data (survives `docker compose down`, discarded only on `docker compose down -v`). `SECRET_KEY_BASE` defaults to a placeholder string with an explicit comment to replace in production — not silently generating one at runtime.
+
+---
+
 ## What Was NOT Delegated to AI
 
 - Technology selection (PostgreSQL, Rails, Next.js) — human decision

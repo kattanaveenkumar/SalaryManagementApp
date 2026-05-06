@@ -1,0 +1,9 @@
+.next/
+node_modules/
+coverage/
+__mocks__/
+src/__tests__/
+jest.config.js
+jest.setup.ts
+README.md
+.env*.local

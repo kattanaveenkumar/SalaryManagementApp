@@ -1,0 +1,54 @@
+services:
+
+  # ── PostgreSQL ────────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB:       salary_management_development
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Rails API ─────────────────────────────────────────────────────────────────
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST:         db
+      DB_PORT:         5432
+      DB_USER:         postgres
+      DB_PASSWORD:     postgres
+      DB_NAME:         salary_management_development
+      RAILS_ENV:       production
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-change_me_in_production_use_rails_secret}
+    ports:
+      - "3000:3000"
+
+  # ── Next.js frontend ──────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Empty → api.ts uses relative URLs → Next.js rewrite proxies to backend
+        NEXT_PUBLIC_API_URL: ""
+        # Tells next.config.js rewrites where to forward /api/* server-side
+        BACKEND_URL: "http://backend:3000"
+    depends_on:
+      - backend
+    environment:
+      PORT:        3001
+      HOSTNAME:    0.0.0.0
+      BACKEND_URL: http://backend:3000
+    ports:
+      - "3001:3001"
+
+volumes:
+  pg_data:
