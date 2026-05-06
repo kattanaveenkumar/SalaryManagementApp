@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "==> Waiting for database..."
+until bundle exec rails runner "ActiveRecord::Base.connection.execute('SELECT 1')" 2>/dev/null; do
+  echo "    Database not ready — retrying in 2s"
+  sleep 2
+done
+echo "==> Database is ready."
+
+echo "==> Running migrations..."
+bundle exec rails db:create db:migrate
+
+echo "==> Running seed script..."
+bundle exec rails db:seed
+
+echo "==> Starting Rails server..."
+exec bundle exec rails server -b 0.0.0.0 -p 3000
