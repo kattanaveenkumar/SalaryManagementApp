@@ -1,17 +1,18 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import EmployeeFilters from "@/components/employees/EmployeeFilters";
 
 describe("EmployeeFilters", () => {
-  it("renders country and job title inputs", () => {
+  it("renders name search and country filter inputs", () => {
     render(<EmployeeFilters filters={{}} onChange={jest.fn()} />);
-    expect(screen.getByPlaceholderText(/united states/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/software engineer/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/search employees/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Country")).toBeInTheDocument();
   });
 
-  it("renders the Apply button", () => {
+  it("renders salary range inputs", () => {
     render(<EmployeeFilters filters={{}} onChange={jest.fn()} />);
-    expect(screen.getByRole("button", { name: /apply/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Min $")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Max $")).toBeInTheDocument();
   });
 
   it("does not show Clear button when no active filters", () => {
@@ -24,11 +25,10 @@ describe("EmployeeFilters", () => {
     expect(screen.getByRole("button", { name: /clear/i })).toBeInTheDocument();
   });
 
-  it("calls onChange with typed country when Apply is clicked", async () => {
+  it("calls onChange immediately when country is typed", () => {
     const onChange = jest.fn();
     render(<EmployeeFilters filters={{}} onChange={onChange} />);
-    await userEvent.type(screen.getByPlaceholderText(/united states/i), "Canada");
-    await userEvent.click(screen.getByRole("button", { name: /apply/i }));
+    fireEvent.change(screen.getByPlaceholderText("Country"), { target: { value: "Canada" } });
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ country: "Canada" }));
   });
 
@@ -39,10 +39,10 @@ describe("EmployeeFilters", () => {
     expect(onChange).toHaveBeenCalledWith({ country: undefined, job_title: undefined });
   });
 
-  it("triggers Apply on Enter key in country input", async () => {
+  it("calls onChange when salary minimum is set", () => {
     const onChange = jest.fn();
     render(<EmployeeFilters filters={{}} onChange={onChange} />);
-    await userEvent.type(screen.getByPlaceholderText(/united states/i), "France{Enter}");
-    expect(onChange).toHaveBeenCalled();
+    fireEvent.change(screen.getByPlaceholderText("Min $"), { target: { value: "50000" } });
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ salary_min: 50000 }));
   });
 });

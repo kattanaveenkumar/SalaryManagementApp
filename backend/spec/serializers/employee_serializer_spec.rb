@@ -9,10 +9,10 @@ RSpec.describe EmployeeSerializer do
     create(
       :employee,
       first_name: "Jane",
-      last_name:  "Doe",
-      job_title:  "Engineer",
-      country:    "Canada",
-      salary:     95_000,
+      last_name: "Doe",
+      job_title: "Engineer",
+      country: "Canada",
+      salary: 95_000,
     )
   end
 
@@ -21,15 +21,15 @@ RSpec.describe EmployeeSerializer do
   describe "shape" do
     it "returns exactly the enterprise schema keys — no additions, no omissions" do
       expect(serialized.keys).to match_array(%i[
-        id employee_id
-        first_name last_name preferred_name full_name display_name initials
-        work_email phone_number
-        job_title job_level department business_unit
-        employment_status employment_type manager_name work_location country
-        salary currency salary_band bonus_percentage stock_grant_value
-        hire_date compensation_review_date notes
-        created_at updated_at
-      ])
+                                               id employee_id
+                                               first_name last_name preferred_name full_name display_name initials
+                                               work_email phone_number
+                                               job_title job_level department business_unit
+                                               employment_status employment_type manager_name work_location country
+                                               salary currency salary_band bonus_percentage stock_grant_value
+                                               hire_date compensation_review_date notes
+                                               created_at updated_at
+                                             ])
     end
   end
 

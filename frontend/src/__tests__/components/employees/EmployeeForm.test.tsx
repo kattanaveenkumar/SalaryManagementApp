@@ -5,10 +5,32 @@ import type { Employee } from "@/types";
 
 const employee: Employee = {
   id: 1,
+  employee_id: "EMP001",
+  first_name: "Jane",
+  last_name: "Doe",
+  preferred_name: null,
   full_name: "Jane Doe",
+  display_name: "Jane Doe",
+  initials: "JD",
+  work_email: null,
+  phone_number: null,
   job_title: "Engineer",
+  job_level: null,
+  department: null,
+  business_unit: null,
+  employment_status: "Active",
+  employment_type: "Full-Time",
+  manager_name: null,
+  work_location: null,
   country: "United States",
   salary: 95000,
+  currency: "USD",
+  salary_band: null,
+  bonus_percentage: null,
+  stock_grant_value: null,
+  hire_date: null,
+  compensation_review_date: null,
+  notes: null,
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-01-01T00:00:00Z",
 };
@@ -24,12 +46,10 @@ describe("EmployeeForm", () => {
     expect(screen.getByText("Edit Employee")).toBeInTheDocument();
   });
 
-  it("pre-fills form fields when editing", () => {
+  it("pre-fills first and last name fields when editing", () => {
     render(<EmployeeForm employee={employee} onSubmit={jest.fn()} onClose={jest.fn()} />);
-    expect(screen.getByDisplayValue("Jane Doe")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Engineer")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("United States")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("95000")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Jane")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Doe")).toBeInTheDocument();
   });
 
   it("calls onClose when Cancel is clicked", async () => {
@@ -42,18 +62,11 @@ describe("EmployeeForm", () => {
   it("calls onSubmit and then onClose on successful submission", async () => {
     const onSubmit = jest.fn().mockResolvedValue(undefined);
     const onClose = jest.fn();
-    render(<EmployeeForm onSubmit={onSubmit} onClose={onClose} />);
+    render(<EmployeeForm employee={employee} onSubmit={onSubmit} onClose={onClose} />);
 
-    await userEvent.clear(screen.getByPlaceholderText("Jane Smith"));
-    await userEvent.type(screen.getByPlaceholderText("Jane Smith"), "Alice");
-    await userEvent.clear(screen.getByPlaceholderText("Software Engineer"));
-    await userEvent.type(screen.getByPlaceholderText("Software Engineer"), "Dev");
-    await userEvent.clear(screen.getByPlaceholderText("United States"));
-    await userEvent.type(screen.getByPlaceholderText("United States"), "Canada");
-    await userEvent.clear(screen.getByPlaceholderText("75000"));
-    await userEvent.type(screen.getByPlaceholderText("75000"), "70000");
-
-    await userEvent.click(screen.getByRole("button", { name: /create/i }));
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
@@ -63,7 +76,9 @@ describe("EmployeeForm", () => {
     const onSubmit = jest.fn().mockRejectedValue(new Error("Salary is too low"));
     render(<EmployeeForm employee={employee} onSubmit={onSubmit} onClose={jest.fn()} />);
 
-    await userEvent.click(screen.getByRole("button", { name: /update/i }));
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => expect(screen.getByText("Salary is too low")).toBeInTheDocument());
   });
@@ -73,7 +88,9 @@ describe("EmployeeForm", () => {
     const onSubmit = jest.fn().mockReturnValue(new Promise<void>((r) => (resolve = r)));
     render(<EmployeeForm employee={employee} onSubmit={onSubmit} onClose={jest.fn()} />);
 
-    await userEvent.click(screen.getByRole("button", { name: /update/i }));
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+    await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     expect(screen.getByRole("button", { name: /saving/i })).toBeDisabled();
     resolve();

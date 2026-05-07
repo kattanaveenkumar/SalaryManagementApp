@@ -140,6 +140,7 @@ export default function EmployeeForm({ employee, onSubmit, onClose }: Props) {
     setError(null);
     try {
       await onSubmit(form);
+      onClose();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setSubmitting(false);

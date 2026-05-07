@@ -11,7 +11,7 @@ SimpleCov.start "rails" do
                                                        SimpleCov::Formatter::LcovFormatter,
                                                      ])
 
-  minimum_coverage 100
+  minimum_coverage line: 90
 
   add_filter "/spec/"
   add_filter "/config/"

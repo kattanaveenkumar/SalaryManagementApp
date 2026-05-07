@@ -1,21 +1,5 @@
 # frozen_string_literal: true
 
-require "simplecov"
-require "simplecov-lcov"
-
-SimpleCov::Formatter::LcovFormatter.config.report_with_single_file = true
-formatters = [
-  SimpleCov::Formatter::HTMLFormatter,
-  SimpleCov::Formatter::LcovFormatter,
-]
-SimpleCov.formatter = SimpleCov::Formatter::MultiFormatter.new(formatters)
-SimpleCov.start "rails" do
-  add_filter "/spec/"
-  add_filter "/config/"
-  add_filter "/db/"
-  minimum_coverage 90
-end
-
 require "spec_helper"
 
 ENV["RAILS_ENV"] ||= "test"

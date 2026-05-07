@@ -109,9 +109,9 @@ RSpec.describe Insights::SalaryInsightsService do
     it "returns the expected fields for each record" do
       record = described_class.top_earners(limit: 1).first
       expect(record.keys).to match_array(%i[
-        id employee_id full_name display_name initials
-        job_title department country salary currency employment_status job_level
-      ])
+                                           id employee_id full_name display_name initials
+                                           job_title department country salary currency employment_status job_level
+                                         ])
     end
 
     it "returns salary as Float" do
