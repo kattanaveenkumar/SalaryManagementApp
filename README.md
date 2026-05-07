@@ -183,19 +183,80 @@ idx_employees_hire_date                 (hire_date)
 
 ---
 
-## Local Development (without Docker)
+## Local Development
+
+### With Docker (recommended)
+
+Docker Compose wires up all three services, runs migrations, and seeds 10 k employees
+automatically. No local Ruby or Node installation required.
 
 ```bash
-# Backend prerequisites: Ruby 3.2, PostgreSQL 16
+# First run — build images, create DB, run migrations, seed, start servers
+docker compose up --build
+
+# Subsequent runs (images already built)
+docker compose up
+
+# Stop all services (data volume is preserved)
+docker compose down
+
+# Stop and wipe the database volume (full reset)
+docker compose down -v
+```
+
+**Convenience Makefile targets:**
+
+```bash
+make docker-build   # docker compose build
+make docker-up      # docker compose up -d  (detached)
+make docker-down    # docker compose down
+make docker-logs    # docker compose logs -f
+```
+
+**Rebuilding after code changes:**
+
+```bash
+# Backend gem changes (Gemfile)
+docker compose build backend && docker compose up -d backend
+
+# Frontend dependency changes (package.json)
+docker compose build frontend && docker compose up -d frontend
+
+# Apply a new migration without full rebuild
+docker compose exec backend bin/rails db:migrate
+```
+
+**Viewing logs:**
+
+```bash
+docker compose logs -f              # all services
+docker compose logs -f backend      # Rails API only
+docker compose logs -f frontend     # Next.js only
+```
+
+**Running a Rails console inside the container:**
+
+```bash
+docker compose exec backend bin/rails console
+```
+
+---
+
+### Without Docker
+
+Requires Ruby 3.2, Node 20+, and a local PostgreSQL 16 instance.
+
+```bash
+# Backend
 cd backend
 bundle install
 bin/rails db:create db:migrate db:seed
-bin/rails server -p 3000
+bin/rails server -p 3000           # API at http://localhost:3000
 
-# Frontend prerequisites: Node 20+
+# Frontend (separate terminal)
 cd frontend
 npm install
-npm run dev         # http://localhost:3001
+npm run dev                        # UI at http://localhost:3001
 ```
 
 ---
