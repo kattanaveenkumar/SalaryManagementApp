@@ -13,8 +13,8 @@ export default function Pagination({ meta, onPageChange }: Props) {
   return (
     <div className="flex items-center justify-between py-4">
       <span className="text-sm text-gray-600">
-        Showing {start.toLocaleString()}–{end.toLocaleString()} of{" "}
-        {total_count.toLocaleString()} employees
+        Showing {start.toLocaleString()}–{end.toLocaleString()} of {total_count.toLocaleString()}{" "}
+        employees
       </span>
 
       <div className="flex items-center gap-2">
