@@ -9,10 +9,10 @@ RSpec.describe Employee, type: :model do
 
   describe "validations" do
     it { is_expected.to validate_presence_of(:full_name) }
-    it { is_expected.to validate_length_of(:full_name).is_at_least(2).is_at_most(100) }
+    it { is_expected.to validate_length_of(:full_name).is_at_least(2).is_at_most(120) }
 
     it { is_expected.to validate_presence_of(:job_title) }
-    it { is_expected.to validate_length_of(:job_title).is_at_least(2).is_at_most(100) }
+    it { is_expected.to validate_length_of(:job_title).is_at_least(2).is_at_most(120) }
 
     it { is_expected.to validate_presence_of(:country) }
     it { is_expected.to validate_length_of(:country).is_at_least(2).is_at_most(100) }
