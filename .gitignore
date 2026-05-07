@@ -28,3 +28,10 @@ frontend/.env.production
 
 # Docs build
 docs/_build/
+
+# Assessment document — not source code
+Salary Management Assessment.docx
+
+# Playwright run artifacts
+test-results/
+playwright-report/

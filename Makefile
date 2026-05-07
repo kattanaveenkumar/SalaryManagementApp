@@ -1,4 +1,4 @@
-.PHONY: help setup lint lint-backend lint-frontend \
+.PHONY: help setup ci lint lint-backend lint-frontend \
         format format-backend format-frontend format-check \
         test test-backend test-frontend test-e2e \
         coverage coverage-backend coverage-frontend \
@@ -19,6 +19,10 @@ help: ## Show this help message
 setup: ## Install all dependencies (backend gems + frontend packages)
 	cd $(BACKEND_DIR) && bundle install
 	cd $(FRONTEND_DIR) && npm install
+
+# ── CI (mirrors GitHub Actions pipeline) ─────────────────────────────────────
+
+ci: lint format-check test ## Run the full CI pipeline locally (lint + format-check + tests)
 
 # ── Lint ──────────────────────────────────────────────────────────────────────
 
