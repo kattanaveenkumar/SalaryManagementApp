@@ -15,8 +15,8 @@ RSpec.describe Insights::SalaryInsightsService do
     subject(:result) { described_class.country_salaries }
 
     it "returns one row per country" do
-      countries = result.map { |r| r[:country] }
-      expect(countries).to match_array(["Germany", "United States"])
+      countries = result.pluck(:country)
+      expect(countries).to contain_exactly("Germany", "United States")
     end
 
     it "returns correct aggregate values for a country" do
@@ -28,13 +28,14 @@ RSpec.describe Insights::SalaryInsightsService do
     end
 
     it "orders results alphabetically by country" do
-      countries = result.map { |r| r[:country] }
+      countries = result.pluck(:country)
       expect(countries).to eq(countries.sort)
     end
 
     it "returns all numeric fields as Float" do
+      numeric_fields = %i[min_salary max_salary avg_salary]
       result.each do |row|
-        %i[min_salary max_salary avg_salary].each do |field|
+        numeric_fields.each do |field|
           expect(row[field]).to be_a(Float), "expected #{field} to be Float"
         end
       end
@@ -53,14 +54,14 @@ RSpec.describe Insights::SalaryInsightsService do
     end
 
     it "orders results by avg_salary descending" do
-      salaries = result.map { |r| r[:avg_salary] }
+      salaries = result.pluck(:avg_salary)
       expect(salaries).to eq(salaries.sort.reverse)
     end
 
     context "with country filter" do
       it "returns only rows for that country" do
         filtered = described_class.job_title_salaries(country: "Germany")
-        expect(filtered.map { |r| r[:country] }.uniq).to eq(["Germany"])
+        expect(filtered.pluck(:country).uniq).to eq(["Germany"])
       end
 
       it "returns empty array when no employees match" do
@@ -73,13 +74,14 @@ RSpec.describe Insights::SalaryInsightsService do
     subject(:result) { described_class.salary_percentiles }
 
     it "returns one row per country" do
-      countries = result.map { |r| r[:country] }
-      expect(countries).to match_array(["Germany", "United States"])
+      countries = result.pluck(:country)
+      expect(countries).to contain_exactly("Germany", "United States")
     end
 
     it "returns p25, p50, p75, p90 as Float" do
+      percentile_fields = %i[p25 p50 p75 p90]
       result.each do |row|
-        %i[p25 p50 p75 p90].each do |pct|
+        percentile_fields.each do |pct|
           expect(row[pct]).to be_a(Float), "expected #{pct} to be Float"
         end
       end
@@ -100,7 +102,7 @@ RSpec.describe Insights::SalaryInsightsService do
     end
 
     it "returns employees ordered by salary descending" do
-      salaries = described_class.top_earners(limit: 5).map { |e| e[:salary] }
+      salaries = described_class.top_earners(limit: 5).pluck(:salary)
       expect(salaries).to eq(salaries.sort.reverse)
     end
 

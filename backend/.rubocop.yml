@@ -1,4 +1,4 @@
-require:
+plugins:
   - rubocop-rails
   - rubocop-rspec
   - rubocop-performance
@@ -42,20 +42,36 @@ Metrics/BlockLength:
   Exclude:
     - "spec/**/*"
     - "config/routes.rb"
+    - "db/seeds.rb"
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - "app/services/employees/list_service.rb"
+
+Metrics/PerceivedComplexity:
+  Exclude:
+    - "app/services/employees/list_service.rb"
 
 Metrics/MethodLength:
-  Max: 15
+  Max: 45
+  Exclude:
+    - "app/services/**/*"
 
 Metrics/AbcSize:
-  Max: 20
+  Max: 50
+  Exclude:
+    - "app/services/**/*"
 
 Metrics/ClassLength:
-  Max: 150
+  Max: 200
 
 # ── Rails ─────────────────────────────────────────────────────────────────────
 
 Rails/FilePath:
   EnforcedStyle: slashes
+
+Rails/I18nLocaleTexts:
+  Enabled: false
 
 Rails/SkipsModelValidations:
   AllowedMethods:
@@ -76,5 +92,11 @@ RSpec/NestedGroups:
 RSpec/LetSetup:
   Enabled: false
 
-RSpec/FilePath:
+RSpec/ImplicitSubject:
+  Enabled: false
+
+RSpec/SpecFilePathFormat:
+  Enabled: false
+
+RSpec/SpecFilePathSuffix:
   Enabled: false

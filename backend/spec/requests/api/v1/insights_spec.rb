@@ -3,7 +3,8 @@
 require "rails_helper"
 
 RSpec.describe "Api::V1::Insights", type: :request do
-  let(:json) { response.parsed_body }
+  let(:headers) { auth_headers }
+  let(:json)    { response.parsed_body }
 
   before do
     create(:employee, country: "United States", job_title: "Engineer", salary: 80_000)
@@ -14,7 +15,7 @@ RSpec.describe "Api::V1::Insights", type: :request do
   # ── GET /api/v1/insights/country_salaries ────────────────────────────────────
 
   describe "GET /api/v1/insights/country_salaries" do
-    before { get "/api/v1/insights/country_salaries" }
+    before { get "/api/v1/insights/country_salaries", headers: headers }
 
     it "returns 200 OK" do
       expect(response).to have_http_status(:ok)
@@ -34,28 +35,28 @@ RSpec.describe "Api::V1::Insights", type: :request do
 
   describe "GET /api/v1/insights/job_title_salaries" do
     it "returns 200 OK" do
-      get "/api/v1/insights/job_title_salaries"
+      get "/api/v1/insights/job_title_salaries", headers: headers
       expect(response).to have_http_status(:ok)
     end
 
     it "returns all job title rows when no filter" do
-      get "/api/v1/insights/job_title_salaries"
+      get "/api/v1/insights/job_title_salaries", headers: headers
       expect(json["data"].length).to eq(3)
     end
 
     it "includes meta with country_filter key" do
-      get "/api/v1/insights/job_title_salaries"
+      get "/api/v1/insights/job_title_salaries", headers: headers
       expect(json["meta"]).to have_key("country_filter")
     end
 
     it "filters by country param" do
-      get "/api/v1/insights/job_title_salaries", params: { country: "Germany" }
+      get "/api/v1/insights/job_title_salaries", params: { country: "Germany" }, headers: headers
       expect(json["data"].length).to eq(1)
       expect(json["data"].first["country"]).to eq("Germany")
     end
 
     it "sets country_filter in meta when param provided" do
-      get "/api/v1/insights/job_title_salaries", params: { country: "Germany" }
+      get "/api/v1/insights/job_title_salaries", params: { country: "Germany" }, headers: headers
       expect(json["meta"]["country_filter"]).to eq("Germany")
     end
   end
@@ -63,7 +64,7 @@ RSpec.describe "Api::V1::Insights", type: :request do
   # ── GET /api/v1/insights/salary_percentiles ──────────────────────────────────
 
   describe "GET /api/v1/insights/salary_percentiles" do
-    before { get "/api/v1/insights/salary_percentiles" }
+    before { get "/api/v1/insights/salary_percentiles", headers: headers }
 
     it "returns 200 OK" do
       expect(response).to have_http_status(:ok)
@@ -83,28 +84,28 @@ RSpec.describe "Api::V1::Insights", type: :request do
 
   describe "GET /api/v1/insights/top_earners" do
     it "returns 200 OK" do
-      get "/api/v1/insights/top_earners"
+      get "/api/v1/insights/top_earners", headers: headers
       expect(response).to have_http_status(:ok)
     end
 
     it "returns up to 10 earners by default" do
-      get "/api/v1/insights/top_earners"
+      get "/api/v1/insights/top_earners", headers: headers
       expect(json["data"].length).to be <= 10
     end
 
     it "respects the limit param" do
-      get "/api/v1/insights/top_earners", params: { limit: 1 }
+      get "/api/v1/insights/top_earners", params: { limit: 1 }, headers: headers
       expect(json["data"].length).to eq(1)
     end
 
     it "returns employees in descending salary order" do
-      get "/api/v1/insights/top_earners"
-      salaries = json["data"].map { |e| e["salary"] }
+      get "/api/v1/insights/top_earners", headers: headers
+      salaries = json["data"].pluck("salary")
       expect(salaries).to eq(salaries.sort.reverse)
     end
 
     it "includes expected fields for each earner" do
-      get "/api/v1/insights/top_earners"
+      get "/api/v1/insights/top_earners", headers: headers
       entry = json["data"].first
       expect(entry.keys).to include("id", "full_name", "job_title", "country", "salary")
     end

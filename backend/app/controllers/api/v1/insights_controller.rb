@@ -3,6 +3,11 @@
 module Api
   module V1
     class InsightsController < ApplicationController
+      # GET /api/v1/insights/company_kpis
+      def company_kpis
+        render json: { data: Insights::SalaryInsightsService.company_kpis }
+      end
+
       # GET /api/v1/insights/country_salaries
       def country_salaries
         render json: { data: Insights::SalaryInsightsService.country_salaries }
@@ -26,7 +31,7 @@ module Api
 
       # GET /api/v1/insights/top_earners?limit=10
       def top_earners
-        limit = [[params.fetch(:limit, 10).to_i, 1].max, 100].min
+        limit = params.fetch(:limit, 10).to_i.clamp(1, 100)
         render json: { data: Insights::SalaryInsightsService.top_earners(limit: limit) }
       end
     end

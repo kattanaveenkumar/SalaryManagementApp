@@ -12,10 +12,10 @@ module Api
         render json: {
           data: result.employees.map { |e| EmployeeSerializer.call(e) },
           meta: {
-            total_count:  result.total_count,
-            total_pages:  result.total_pages,
+            total_count: result.total_count,
+            total_pages: result.total_pages,
             current_page: result.current_page,
-            per_page:     result.per_page,
+            per_page: result.per_page,
           },
         }
       end
@@ -32,7 +32,7 @@ module Api
         if result.success
           render json: { data: EmployeeSerializer.call(result.employee) }, status: :created
         else
-          render json: { errors: result.errors }, status: :unprocessable_entity
+          render json: { errors: result.errors }, status: :unprocessable_content
         end
       end
 
@@ -43,7 +43,7 @@ module Api
         if result.success
           render json: { data: EmployeeSerializer.call(result.employee) }
         else
-          render json: { errors: result.errors }, status: :unprocessable_entity
+          render json: { errors: result.errors }, status: :unprocessable_content
         end
       end
 
@@ -60,11 +60,27 @@ module Api
       end
 
       def employee_params
-        params.require(:employee).permit(:full_name, :job_title, :country, :salary)
+        params.require(:employee).permit(
+          :first_name, :last_name, :preferred_name, :full_name,
+          :work_email, :phone_number,
+          :job_title, :job_level, :department, :business_unit,
+          :employment_status, :employment_type,
+          :manager_name, :work_location, :country,
+          :salary, :currency, :salary_band, :bonus_percentage, :stock_grant_value,
+          :hire_date, :compensation_review_date,
+          :notes
+        )
       end
 
       def list_params
-        params.permit(:country, :job_title, :page, :per_page)
+        params.permit(
+          :name, :email, :employee_id,
+          :country, :job_title, :department, :employment_status, :employment_type,
+          :job_level, :salary_band, :manager_name,
+          :salary_min, :salary_max,
+          :hire_date_from, :hire_date_to,
+          :sort_by, :sort_order, :page, :per_page
+        )
       end
     end
   end

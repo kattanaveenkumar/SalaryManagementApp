@@ -18,8 +18,9 @@ RSpec.describe Employee, type: :model do
     it { is_expected.to validate_length_of(:country).is_at_least(2).is_at_most(100) }
 
     it { is_expected.to validate_presence_of(:salary) }
+
     it {
-      is_expected.to validate_numericality_of(:salary)
+      expect(employee).to validate_numericality_of(:salary)
         .is_greater_than_or_equal_to(Employee::MIN_SALARY)
         .is_less_than_or_equal_to(Employee::MAX_SALARY)
     }

@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe "GET /health", type: :request do
-  it "returns 200 OK" do
+  it "returns 200 OK without any auth token" do
     get "/health"
     expect(response).to have_http_status(:ok)
   end
