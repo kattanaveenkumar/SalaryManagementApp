@@ -7,7 +7,7 @@ A full-stack HR platform for managing employee compensation across a 10,000-pers
 ## Quick Start
 
 ```bash
-git clone <repo>
+git clone https://github.com/kattanaveenkumar/SalaryManagementApp.git
 cd SalaryManagementApp
 docker compose up --build
 ```
