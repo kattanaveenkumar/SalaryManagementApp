@@ -1,23 +1,18 @@
-# AI Prompts & Tool Usage
+# AI-Assisted Development Log
 
-This document records how AI tools were used in building this system.
-It demonstrates intentional, structured AI usage rather than blind generation.
+This document records how Claude was used as a structured pair programming tool across the development of this system. It is not a chronological diary — it is organised by logical phase, the order a thoughtful engineer would plan the work, not necessarily the order every line was typed.
 
 ---
 
 ## Approach
 
-AI was used as a **staff-level pair programmer**, not a code generator.
-Every output was reviewed for correctness, security, and alignment with requirements.
-
-The development was structured in explicit phases — each phase was approved before the next
-began. This ensured the AI could not race ahead and generate code that wasn't thought through.
+Claude was used as a **staff-level pair programmer**, not a code generator. Each phase had a clear prompt intent. Every output was reviewed for correctness, security, and architectural alignment before acceptance. No phase began until the previous one was approved.
 
 ---
 
-## Phase 0 — Thinking (No Code)
+## Phase 0 — Problem Analysis & Success Criteria
 
-**Prompt intent:** Force structured analysis before any implementation.
+**Prompt intent:** Force structured analysis before any implementation. No code until the problem is understood.
 
 Key questions asked:
 - What are the performance risks at 10k scale?
@@ -25,202 +20,188 @@ Key questions asked:
 - Why PostgreSQL over SQLite?
 - What are the measurable success criteria?
 
-**Human decision made here:** PostgreSQL over SQLite (for `PERCENTILE_CONT` support),
-Rails 7 API mode, Next.js 14 frontend.
+**Human decisions made here:**
+- PostgreSQL over SQLite — `PERCENTILE_CONT` (exact salary percentiles) is PostgreSQL-native; SQLite has no equivalent
+- Rails 7 API mode + Next.js 14 frontend
+- Target latencies: employee list < 50ms, insight aggregations < 30ms, seed < 5 seconds
 
 ---
 
-## Phase 1 — Architecture
+## Phase 1 — Architecture & API Contract
 
-**Prompt intent:** Define the full system before writing any file.
+**Prompt intent:** Design the full system topology and define the API surface *before* writing any implementation file. Changing architecture after code exists is expensive. Changing a contract document costs nothing.
 
 Outputs reviewed:
-- Layer responsibilities (controller → service → model)
-- Index strategy per query pattern
-- Docker networking topology (service name routing, not localhost)
-- API surface design
+- Layer responsibilities (controller → service → model — no business logic bleeds up or down)
+- API surface: every endpoint, every query param, every status code agreed upfront
+- Index strategy mapped to each query pattern before schema was written
+- Docker networking topology (service name routing, not `localhost`)
+- `rescue_from` strategy in `ApplicationController` for uniform 404/400 handling
 
-**Human decision made here:** Single `InsightsController` (not 4 separate controllers),
-`scope "/insights"` routing pattern, `Result` struct pattern for service return values.
+**Human decisions made here:**
+- Single `InsightsController` (not 4 separate controllers) with `scope "/insights"` routing
+- `Result` struct pattern for service return values — explicit success/failure, no exceptions for expected cases
+- `/api/v1/` versioning — future-proofs payroll integrations
+- `per_page` clamped server-side to `[1, 100]` — clients cannot dump all rows in one request
 
 ---
 
-## Phase 2 — Data Model
+## Phase 2 — Infrastructure & Developer Tooling
 
-**Prompt intent:** Justify every field, every index, every constraint.
+**Prompt intent:** Configure linting, formatting, coverage gates, and containers *before* writing production code — not as a cleanup step at the end. Code written without a linter is code that needs retroactive cleanup.
 
 Outputs reviewed:
-- `decimal(12, 2)` for salary (not float — avoids IEEE 754 rounding in financial data)
-- Composite indexes `(country, salary)` and `(country, job_title, salary)` for covering scans
-- Salary validation bounds `[20_000, 500_000]` — realistic global range
-- 155 × 160 name corpus = 24,800 unique combinations
+- `backend/.rubocop.yml` — `plugins:` format (not deprecated `require:`), rubocop-rspec 3.x, metric exclusions for service objects (AbcSize ≤ 50, MethodLength ≤ 45), frozen string literals enforced
+- `frontend/.eslintrc.json` — `plugin:@typescript-eslint/recommended` + `eslint-config-prettier`, `@typescript-eslint/no-unused-vars` as error, `next lint --max-warnings 0`
+- `frontend/.prettierrc` — 100-char width, double quotes, trailing commas, LF; `eslint-config-prettier` disables conflicting ESLint rules
+- `backend/spec/rails_helper.rb` — SimpleCov with LcovFormatter + HTMLFormatter, `minimum_coverage 90`, filters exclude spec/, config/, db/
+- `Makefile` — root-level targets: `lint`, `format`, `format-check`, `test`, `test-e2e`, `coverage`, `docker-*`; each documented with `##` for `make help`
+- `docker-compose.yml` — three services (db, backend, frontend), explicit `depends_on: condition: service_healthy`, named volume `pg_data`
+- `backend/Dockerfile` — two-stage Alpine build (gem install → stripped runtime), non-root `rails` user, `force_ruby_platform: true` for musl compatibility
+- `frontend/next.config.js` — `rewrites()` block proxying `/api/*` to `BACKEND_URL` server-side
+
+**Human decisions made here:**
+- Prettier over EditorConfig — runtime-enforced, not a hint
+- `format:check` as a separate CI-safe script that never writes
+- SimpleCov minimum at 90, not 100 — defensive branches that are genuinely hard to reach shouldn't block the suite
+- Named volume over bind-mount for Postgres data — survives `docker compose down`, discarded only on `docker compose down -v`
+- `SECRET_KEY_BASE` defaults to a placeholder string with an explicit comment to replace — not silently generating one at runtime
 
 ---
 
-## Phase 3 — Seed Script
+## Phase 3 — Data Model
 
-**Prompt intent:** Performance-critical implementation, not just "make it work."
+**Prompt intent:** Justify every field, every index, every constraint. The schema is the contract between the application and the database — mistakes here are expensive to reverse.
 
 Outputs reviewed:
-- `insert_all` in batches of 1,000 (10 round-trips vs 10,000)
-- `Random.new(42)` — fixed seed for deterministic, reproducible data
-- Idempotency guard: `if Employee.count >= SEED_COUNT` → skip
-- Partial-run recovery: `Employee.delete_all` before reseeding
+- `DECIMAL(12, 2)` for salary — `FLOAT` salary of $100,000 can round to $99,999.999 in aggregate queries; financial data requires exact representation
+- Composite covering indexes `(country, salary)` and `(country, job_title, salary)` — PostgreSQL can satisfy `GROUP BY country + AVG(salary)` as an index-only scan with no heap access
+- Salary validation bounds `[20_000, 600_000]` — realistic global range for a 10k-person org
+- 155 × 160 name corpus = 24,800 unique combinations for deterministic seed variety
+- Partial unique index on `work_email WHERE work_email IS NOT NULL` — enforces uniqueness without rejecting NULL
+- `employment_status`, `employment_type`, `department`, `job_level`, `salary_band`, `currency` as frozen constant arrays — validation and frontend dropdown population from one source of truth
 
 ---
 
-## Phase 4 — Insights Engine
+## Phase 4 — Authentication
 
-**Prompt intent:** SQL-first aggregation, no in-memory computation.
+**Prompt intent:** Build authentication as infrastructure, not an afterthought. Every protected endpoint depends on it. JWT approach means no session storage needed — the API stays stateless.
 
 Outputs reviewed:
-- `PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY salary)` — exact percentiles, not approximate
-- `exec_query` for raw SQL, ActiveRecord scope chains for parameterized queries
-- `scope.where(country: country)` for safe parameterization (no string interpolation)
-- `top_earners` limit clamped to `[1, 100]` in the controller (injection guard)
+- `User` model with `has_secure_password` — bcrypt hashing, never store plaintext
+- `before_save :downcase_email` — case-insensitive email handling at persistence, not at query time
+- `Auth::TokenService.encode/decode` — JWT HS256 signed with `SECRET_KEY_BASE`, all token logic in one place
+- `AuthController#login` — `user&.authenticate(password)` with deliberate constant-time `nil` check (no user enumeration via timing)
+- `authenticate_user!` before-action in `ApplicationController` — a single gate that protects everything; auth endpoints use `skip_before_action`
+- Role field (`hr_manager`, `admin`) embedded in JWT payload — no DB lookup per request for role checks
+
+**Human decision made here:** Two roles only (`hr_manager`, `admin`) — RBAC can be extended but adding premature granularity is over-engineering for an assessment context.
 
 ---
 
-## Phase 5 — API Design
+## Phase 5 — Business Logic & Services
 
-**Prompt intent:** Clean REST API with proper status codes and strong params.
+**Prompt intent:** All business logic lives in service objects. Controllers are routing logic only. SQL aggregations must happen at the database level — no in-memory GROUP BY in Ruby.
 
 Outputs reviewed:
-- Strong params via `params.require(:employee).permit(...)` — no mass assignment
-- `per_page` clamped to `[1, 100]` server-side — clients cannot request all 10k rows
-- `head :no_content` for DELETE (no body, 204 status)
-- `rescue_from` in ApplicationController handles 404/400 uniformly
+
+**Seed script:**
+- `Employee.insert_all` in batches of 1,000 — 10 SQL round-trips instead of 10,000
+- `Random.new(42)` — fixed seed for deterministic, reproducible data across every deploy
+- Idempotency guard: `if Employee.count >= SEED_COUNT` → skip (safe to run on every container start)
+- Partial-run recovery: `Employee.delete_all` before reseeding if count is low
+
+**Insights service:**
+- `PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY salary)` — exact percentiles, not approximated
+- `ROUND(PERCENTILE_CONT(...)::numeric, 2)` — explicit `::numeric` cast required; PostgreSQL's `ROUND(double precision, integer)` overload is unavailable on older versions
+- `exec_query` for raw SQL returning typed result sets; ActiveRecord scope chains for parameterised queries
+- `scope.where(country: country)` — safe parameterisation, no string interpolation
+- `top_earners` limit clamped to `[1, 100]` in the controller (not the service) — injection guard at the HTTP boundary
+
+**Employee CRUD services (ListService, CreateService, UpdateService):**
+- `Result = Struct.new(:success, :employee, :errors)` — explicit return type, no exceptions for expected failures
+- `SORTABLE_COLUMNS` allowlist + `SORT_ORDERS` allowlist before any column name touches SQL
+- `Kaminari` `.page(n).per(m)` — `per_page` clamped to `[1, 100]` before delegation
+- `build_scope` accumulates `where` clauses conditionally — only active filters generate SQL predicates
 
 ---
 
 ## Phase 6 — Frontend
 
-**Prompt intent:** Build a production-grade Next.js 14 UI using the established API surface, not a demo.
+**Prompt intent:** Build a production-grade Next.js 14 UI that consumes the established API contract, not a CRUD demo.
 
 Outputs reviewed:
-- `useEmployees` / `useInsights` hooks with cancellation tokens (`cancelled` flag) — prevents state updates on unmounted components
-- `employeeApi` / `insightsApi` service layer — single `request<T>()` function centralises error handling and JSON decoding
-- `EmployeeForm` — controlled inputs, submit-lock during async, error display from API response
-- `EmployeeFilters` — debounce-free design; user presses Apply or Enter (appropriate for a data tool, not a search box)
-- All insight components receive typed props and render currency via `formatCurrency` (shared `Intl.NumberFormat` instance)
-- `Pagination` — computes `start/end` from `meta`, disables Prev/Next at boundaries
+- `useEmployees` / `useInsights` hooks with cancellation tokens (`cancelled` flag) — prevents `setState` on unmounted components
+- `employeeApi` / `insightsApi` service layer — single `request<T>()` function centralises error handling, JSON decoding, and auth header injection
+- `EmployeeForm` — controlled inputs, submit-lock during async (`submitting` state), error display directly from API response body
+- `EmployeeFilters` — debounce-free; user presses Apply or Enter (appropriate for a data tool, not a search box)
+- `EmployeeTable` — portal-based action menu (renders to `document.body`) to avoid z-index stacking context conflicts; position calculated via `getBoundingClientRect()`
+- All insight components receive typed props and render currency via a shared `Intl.NumberFormat` instance
+- `AppNav` — sticky header with active link detection via `usePathname`, profile dropdown, hidden on `/login` and `/signup`
+- `AuthGuard` — wraps protected pages; redirects unauthenticated users to `/login` before render
 
-**Human decision made here:** Client-side country filter in `JobTitleInsights` (instant, no extra API call — data already loaded); standalone `LoadingSpinner` and `ErrorBanner` as shared primitives rather than inline states.
+**Human decisions made here:**
+- Client-side country filter in `JobTitleInsights` — data already loaded, instant, no extra API call
+- Standalone `LoadingSpinner` and `ErrorBanner` as shared primitives rather than repeated inline states
+- `CompensIQ` as the product brand name in the nav — distinct from the generic system description in docs
 
 ---
 
-## Phase 7 — Tests
+## Phase 7 — Testing Strategy
 
-**Prompt intent:** Full test coverage with no mocking of the database (backend) and no real network calls (frontend).
+**Prompt intent:** Tests should be written alongside each feature, not as a final pass. The test suite is the confidence mechanism for every refactor. No mocking of the database on the backend — the whole point of service-layer testing is to verify SQL correctness.
 
-Backend (109 examples, 100% line coverage):
-- `spec/models/employee_spec.rb` — Shoulda matchers for every validation + scope behaviour
-- `spec/serializers/employee_serializer_spec.rb` — field shape, Float type, ISO 8601 timestamps
-- `spec/services/employees/{create,update,list}_service_spec.rb` — success/failure results, pagination caps
-- `spec/services/insights/salary_insights_service_spec.rb` — all 4 aggregation methods with real SQL against test DB
-- `spec/requests/health_spec.rb` — smoke test
-- `spec/requests/api/v1/{employees,insights}_spec.rb` — full request cycle: filters, pagination, 404s, 422s
+Backend (109 examples, ≥90% line coverage enforced by SimpleCov):
+- `spec/models/employee_spec.rb` — Shoulda matchers for every validation and scope behaviour
+- `spec/services/employees/{create,update,list}_service_spec.rb` — success/failure result branches, pagination caps, sort whitelist enforcement
+- `spec/services/insights/salary_insights_service_spec.rb` — all aggregation methods against real SQL on the test database (no mocking)
+- `spec/requests/api/v1/{employees,insights,auth}_spec.rb` — full request cycle: filters, pagination, 401s, 404s, 422s
 
 Frontend (88 tests, 15 suites):
 - `lib/format.test.ts` — currency formatting edge cases
-- `services/api.test.ts` — fetch mock verifies URL construction, method, body, error parsing
-- `hooks/useEmployees.test.ts` / `useInsights.test.ts` — mock API, verify loading→data→error state transitions
+- `services/api.test.ts` — fetch mock verifies URL construction, method, body, and error parsing
+- `hooks/useEmployees.test.ts` / `useInsights.test.ts` — mock API, verify `loading → data → error` state transitions
 - All 10 components tested for render, user interaction, and accessibility attributes
 
-**Bug found and fixed:** `ROUND(PERCENTILE_CONT(...)::numeric, 2)` — PostgreSQL 12 lacks `ROUND(double precision, integer)`; explicit `::numeric` cast required. The test suite caught this before any human noticed.
+E2E (21 Playwright scenarios):
+- `page.route()` intercepts all API calls — tests are fully deterministic with no Docker dependency
+- Auth flow, employee CRUD, filter behaviour, and insights rendering all covered
 
-**Environment issues resolved:**
-- `@next/swc` native binary causes SIGBUS on this CPU; Jest config switched to `babel-jest` with Next.js bundled presets
-- Ruby 3.2.2 installed via RVM; postgres user password set to match `database.yml` defaults
-
----
-
-## Phase 8 — Docker / Deployment
-
-**Prompt intent:** Zero-step startup — `docker compose up --build` is the complete workflow.
-
-Outputs reviewed:
-- `backend/Dockerfile` — two-stage build (gem install → stripped runtime image); non-root `rails` user; alpine base for minimal attack surface
-- `docker-compose.yml` — three services (db, backend, frontend) with explicit `depends_on` health checks; named volume `pg_data` persists data across restarts
-- `frontend/Dockerfile` — updated `NEXT_PUBLIC_API_URL` to empty and added `BACKEND_URL` build arg; browser fetches use relative paths, Next.js server proxies them to the backend Docker service name
-- `frontend/next.config.js` — added `rewrites()` block: `/api/*` and `/health` proxied server-side to `BACKEND_URL` (defaulting to `http://localhost:3000` for local dev)
-- `.dockerignore` files for both services — exclude test files, coverage, and local artefacts from the build context
-
-**Key architectural decision:** Client-side fetches cannot resolve `http://backend:3000` because the browser has no access to Docker's internal DNS. Instead of exposing a hardcoded `localhost` URL as a build-time constant (brittle), the frontend proxies all `/api/*` traffic through the Next.js standalone server, which runs inside the Docker network and can resolve `backend` by service name.
-
-**Human decision made here:** Named volume over bind-mount for Postgres data (survives `docker compose down`, discarded only on `docker compose down -v`). `SECRET_KEY_BASE` defaults to a placeholder string with an explicit comment to replace in production — not silently generating one at runtime.
+**Bug caught by the test suite (not a human):** `ROUND(PERCENTILE_CONT(...)::numeric, 2)` — PostgreSQL lacks `ROUND(double precision, integer)` overload; the explicit `::numeric` cast was missing. The insight service spec caught this before any manual testing.
 
 ---
 
-## Phase 9 — Lint & Format Enforcement
+## Phase 8 — Performance Analysis
 
-**Prompt intent:** Enforce consistent code style machine-checkable — no human eyeballing,
-warnings treated as hard errors.
-
-Outputs reviewed:
-- `backend/.rubocop.yml` — plugins format (`plugins:` not deprecated `require:`), rubocop-rspec 3.x,
-  metric exclusions for service objects (AbcSize ≤ 50, MethodLength ≤ 45), strict frozen-string-literal
-- `frontend/.eslintrc.json` — `plugin:@typescript-eslint/recommended` + `eslint-config-prettier`,
-  `@typescript-eslint/no-unused-vars` as error, `next lint --max-warnings 0`
-- `frontend/.prettierrc` — 100-char width, double quotes (matches TS convention), trailing commas,
-  LF line endings; `eslint-config-prettier` disables ESLint rules that conflict with Prettier
-- `backend/spec/rails_helper.rb` — SimpleCov with LcovFormatter + HTMLFormatter, `minimum_coverage 90`,
-  filters exclude spec/, config/, db/
-- `Makefile` — root-level convenience targets: `lint`, `format`, `format-check`, `test`, `test-e2e`,
-  `coverage`, `docker-*`; each target documented with `##` for `make help`
-
-**Human decision made here:** Prettier over EditorConfig (runtime-enforced, not hint-based);
-`format:check` as a separate CI-safe script that never writes; SimpleCov minimum set at 90
-(not 100 — leaves room for defensive branches that are hard to reach in tests).
-
-**Quality gates after this phase:**
-- `bundle exec rubocop` → 47 files inspected, 0 offenses
-- `npm run lint` → 0 ESLint warnings or errors
-- `npm run format:check` → all files match Prettier style
-- `npm run test:e2e` → 21/21 passed
-
----
-
-## Phase 10 — Performance Review
-
-**Prompt intent:** Treat the existing implementation as a black box; identify every query,
-measure its execution plan, and produce a prioritised improvement roadmap for 1 M employees.
+**Prompt intent:** Treat the built implementation as a black box. Identify every query, map it to its execution plan, and produce a prioritised improvement roadmap for 1M employees. Do not optimise prematurely — profile first, then decide.
 
 Outputs reviewed:
-- Identified **Bottleneck #1**: `ILIKE '%term%'` on `full_name` / `work_email` is a full
-  sequential scan at any scale — fix via `pg_trgm` GIN index (no Rails code change needed)
-- Identified **Bottleneck #2**: `/company_kpis` fires 5 separate `GROUP BY` queries (4 round-trips)
-  — consolidate via `GROUPING SETS` SQL
-- Identified **Bottleneck #3**: `PERCENTILE_CONT` requires an in-memory sort of the salary column;
-  at 1 M rows this may spill to disk if `work_mem` is low — fix via materialized view
-- Confirmed **fast paths**: `top_earners` (index scan with early stop), `country_salaries` and
-  `salary_percentiles` (both covered by composite indexes — index-only scans)
-- Proposed Redis caching (TTL 5 min, insight endpoints only), PgBouncer connection pooling,
-  read replica routing for analytics queries
-- Produced implementation roadmap with effort estimates and expected gains
+- **Bottleneck #1:** `ILIKE '%term%'` on `full_name` / `work_email` — leading wildcard prevents B-tree index use; full sequential scan at any scale. Fix: `pg_trgm` GIN index (no Rails code change needed, just a migration)
+- **Bottleneck #2:** `/company_kpis` fires 5 sequential `GROUP BY` queries. Fix: collapse to one query with `GROUPING SETS`
+- **Bottleneck #3:** `PERCENTILE_CONT` requires in-memory sort; at 1M rows this may spill to disk if `work_mem` is low. Fix: materialized view refreshed on a schedule
+- **Confirmed fast paths:** `top_earners` (index scan + early stop), `country_salaries` and `salary_percentiles` (composite covering indexes — index-only scans at any row count)
+- Proposed: Redis caching (TTL 5 min for insight endpoints), PgBouncer connection pooling, read replica routing for analytics queries
 
-**Human decision made here:** Proposals documented (not implemented) — out of scope for this
-assessment phase. Prioritisation: P0 = pg_trgm + Redis (highest ROI, lowest risk),
-P3 = read replica (infrastructure change, needs DBA sign-off).
+**Human decision made here:** Proposals documented, not implemented — out of scope for this assessment. Prioritisation: P0 = `pg_trgm` + Redis (highest ROI, lowest risk); P3 = read replica (infrastructure change, needs DBA sign-off).
 
-See [docs/performance.md](performance.md) for the full analysis.
+See [performance.md](performance.md) for the full query analysis and implementation roadmap.
 
 ---
 
 ## What Was NOT Delegated to AI
 
 - Technology selection (PostgreSQL, Rails, Next.js) — human decision
-- Index strategy — human reviewed against actual query patterns
-- Salary validation bounds — human decided ($20k–$500k realistic range)
-- Security review of all user input handling — human verified
-- Final commit message wording — human written
+- Index strategy — human reviewed against actual query patterns before any schema was written
+- Salary validation bounds — human decided ($20k–$600k realistic global range)
+- Security posture — human verified parameterised queries, strong params, auth boundaries
+- Hiring signal decisions (what to document, what to cut) — human judgment
 
 ---
 
 ## Code Review Process
 
-Every file generated was reviewed for:
-1. Security (no string interpolation in SQL, strong params in controllers)
-2. Correctness (RuboCop compliance before accepting)
-3. Alignment with the architecture decisions from Phase 1
-4. Test coverage implications
+Every AI-generated file was reviewed for:
+1. **Security** — no string interpolation in SQL, strong params on all mutations, whitelisted sort columns
+2. **Correctness** — RuboCop compliance, TypeScript types, expected test behaviour
+3. **Architectural alignment** — does this respect the layer boundaries defined in Phase 1?
+4. **Test coverage implications** — does this path have a test? Should it?

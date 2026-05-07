@@ -22,6 +22,10 @@ frontend/.next/
 frontend/coverage/
 frontend/.env.local
 frontend/.env.production
+frontend/tsconfig.tsbuildinfo
+
+# Root-level npm artifacts (npm install should run inside frontend/)
+package-lock.json
 
 # Docker
 *.env.local
