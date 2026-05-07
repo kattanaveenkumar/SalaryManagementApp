@@ -5,9 +5,15 @@ Rails.application.routes.draw do
 
   namespace :api do
     namespace :v1 do
+      # Public — no token required
+      post "auth/signup", to: "auth#signup"
+      post "auth/login",  to: "auth#login"
+
+      # Protected — JWT required
       resources :employees, only: %i[index show create update destroy]
 
       scope "/insights" do
+        get :company_kpis,       to: "insights#company_kpis"
         get :country_salaries,   to: "insights#country_salaries"
         get :job_title_salaries, to: "insights#job_title_salaries"
         get :salary_percentiles, to: "insights#salary_percentiles"
