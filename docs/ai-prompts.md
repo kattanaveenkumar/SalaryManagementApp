@@ -152,6 +152,61 @@ Outputs reviewed:
 
 ---
 
+## Phase 9 — Lint & Format Enforcement
+
+**Prompt intent:** Enforce consistent code style machine-checkable — no human eyeballing,
+warnings treated as hard errors.
+
+Outputs reviewed:
+- `backend/.rubocop.yml` — plugins format (`plugins:` not deprecated `require:`), rubocop-rspec 3.x,
+  metric exclusions for service objects (AbcSize ≤ 50, MethodLength ≤ 45), strict frozen-string-literal
+- `frontend/.eslintrc.json` — `plugin:@typescript-eslint/recommended` + `eslint-config-prettier`,
+  `@typescript-eslint/no-unused-vars` as error, `next lint --max-warnings 0`
+- `frontend/.prettierrc` — 100-char width, double quotes (matches TS convention), trailing commas,
+  LF line endings; `eslint-config-prettier` disables ESLint rules that conflict with Prettier
+- `backend/spec/rails_helper.rb` — SimpleCov with LcovFormatter + HTMLFormatter, `minimum_coverage 90`,
+  filters exclude spec/, config/, db/
+- `Makefile` — root-level convenience targets: `lint`, `format`, `format-check`, `test`, `test-e2e`,
+  `coverage`, `docker-*`; each target documented with `##` for `make help`
+
+**Human decision made here:** Prettier over EditorConfig (runtime-enforced, not hint-based);
+`format:check` as a separate CI-safe script that never writes; SimpleCov minimum set at 90
+(not 100 — leaves room for defensive branches that are hard to reach in tests).
+
+**Quality gates after this phase:**
+- `bundle exec rubocop` → 47 files inspected, 0 offenses
+- `npm run lint` → 0 ESLint warnings or errors
+- `npm run format:check` → all files match Prettier style
+- `npm run test:e2e` → 21/21 passed
+
+---
+
+## Phase 10 — Performance Review
+
+**Prompt intent:** Treat the existing implementation as a black box; identify every query,
+measure its execution plan, and produce a prioritised improvement roadmap for 1 M employees.
+
+Outputs reviewed:
+- Identified **Bottleneck #1**: `ILIKE '%term%'` on `full_name` / `work_email` is a full
+  sequential scan at any scale — fix via `pg_trgm` GIN index (no Rails code change needed)
+- Identified **Bottleneck #2**: `/company_kpis` fires 5 separate `GROUP BY` queries (4 round-trips)
+  — consolidate via `GROUPING SETS` SQL
+- Identified **Bottleneck #3**: `PERCENTILE_CONT` requires an in-memory sort of the salary column;
+  at 1 M rows this may spill to disk if `work_mem` is low — fix via materialized view
+- Confirmed **fast paths**: `top_earners` (index scan with early stop), `country_salaries` and
+  `salary_percentiles` (both covered by composite indexes — index-only scans)
+- Proposed Redis caching (TTL 5 min, insight endpoints only), PgBouncer connection pooling,
+  read replica routing for analytics queries
+- Produced implementation roadmap with effort estimates and expected gains
+
+**Human decision made here:** Proposals documented (not implemented) — out of scope for this
+assessment phase. Prioritisation: P0 = pg_trgm + Redis (highest ROI, lowest risk),
+P3 = read replica (infrastructure change, needs DBA sign-off).
+
+See [docs/performance.md](performance.md) for the full analysis.
+
+---
+
 ## What Was NOT Delegated to AI
 
 - Technology selection (PostgreSQL, Rails, Next.js) — human decision
