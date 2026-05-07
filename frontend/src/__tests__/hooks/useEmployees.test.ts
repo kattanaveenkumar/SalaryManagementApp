@@ -62,9 +62,7 @@ describe("useEmployees", () => {
 
     act(() => result.current.setPage(3));
     await waitFor(() => expect(mockApi.list).toHaveBeenCalledTimes(2));
-    expect(mockApi.list).toHaveBeenLastCalledWith(
-      expect.objectContaining({ page: 3 }),
-    );
+    expect(mockApi.list).toHaveBeenLastCalledWith(expect.objectContaining({ page: 3 }));
   });
 
   it("createEmployee calls the API and refreshes", async () => {
@@ -74,7 +72,10 @@ describe("useEmployees", () => {
 
     await act(async () => {
       await result.current.createEmployee({
-        full_name: "Bob", job_title: "Dev", country: "CA", salary: 70000,
+        full_name: "Bob",
+        job_title: "Dev",
+        country: "CA",
+        salary: 70000,
       });
     });
 

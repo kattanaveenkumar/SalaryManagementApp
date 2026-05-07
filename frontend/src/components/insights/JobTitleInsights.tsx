@@ -12,17 +12,13 @@ export default function JobTitleInsights({ data }: Props) {
   const [countryFilter, setCountryFilter] = useState("");
 
   const filtered = countryFilter
-    ? data.filter((r) =>
-        r.country.toLowerCase().includes(countryFilter.toLowerCase()),
-      )
+    ? data.filter((r) => r.country.toLowerCase().includes(countryFilter.toLowerCase()))
     : data;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-semibold text-gray-900">
-          Avg Salary by Job Title
-        </h2>
+        <h2 className="text-base font-semibold text-gray-900">Avg Salary by Job Title</h2>
         <input
           type="text"
           value={countryFilter}
@@ -36,18 +32,10 @@ export default function JobTitleInsights({ data }: Props) {
         <table className="w-full text-sm">
           <thead className="sticky top-0">
             <tr className="border-b border-gray-200 bg-gray-50">
-              <th className="text-left px-3 py-2.5 font-medium text-gray-600">
-                Job Title
-              </th>
-              <th className="text-left px-3 py-2.5 font-medium text-gray-600">
-                Country
-              </th>
-              <th className="text-right px-3 py-2.5 font-medium text-gray-600">
-                Employees
-              </th>
-              <th className="text-right px-3 py-2.5 font-medium text-gray-600">
-                Avg Salary
-              </th>
+              <th className="text-left px-3 py-2.5 font-medium text-gray-600">Job Title</th>
+              <th className="text-left px-3 py-2.5 font-medium text-gray-600">Country</th>
+              <th className="text-right px-3 py-2.5 font-medium text-gray-600">Employees</th>
+              <th className="text-right px-3 py-2.5 font-medium text-gray-600">Avg Salary</th>
             </tr>
           </thead>
           <tbody>

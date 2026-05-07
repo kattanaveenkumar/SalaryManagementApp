@@ -65,7 +65,11 @@ describe("employeeApi", () => {
 
   describe("delete", () => {
     it("sends a DELETE request", async () => {
-      mockFetch.mockResolvedValueOnce({ ok: true, status: 204, json: () => Promise.resolve(undefined) });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+        json: () => Promise.resolve(undefined),
+      });
       await employeeApi.delete(3);
       const [url, opts] = mockFetch.mock.calls[0];
       expect(url).toContain("/api/v1/employees/3");
@@ -80,9 +84,9 @@ describe("employeeApi", () => {
         status: 422,
         json: () => Promise.resolve({ errors: ["Salary is too low", "Name is blank"] }),
       });
-      await expect(employeeApi.create({ full_name: "", job_title: "", country: "", salary: 0 })).rejects.toThrow(
-        "Salary is too low, Name is blank",
-      );
+      await expect(
+        employeeApi.create({ full_name: "", job_title: "", country: "", salary: 0 }),
+      ).rejects.toThrow("Salary is too low, Name is blank");
     });
 
     it("throws with error string message from API", async () => {
@@ -133,18 +137,12 @@ describe("insightsApi", () => {
   it("calls top_earners with default limit", async () => {
     mockResponse({ data: [] });
     await insightsApi.topEarners();
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining("limit=10"),
-      expect.any(Object),
-    );
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining("limit=10"), expect.any(Object));
   });
 
   it("calls top_earners with custom limit", async () => {
     mockResponse({ data: [] });
     await insightsApi.topEarners(5);
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining("limit=5"),
-      expect.any(Object),
-    );
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining("limit=5"), expect.any(Object));
   });
 });

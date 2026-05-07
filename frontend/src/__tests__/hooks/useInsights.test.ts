@@ -5,14 +5,21 @@ import { insightsApi } from "@/services/api";
 jest.mock("@/services/api");
 const mockApi = insightsApi as jest.Mocked<typeof insightsApi>;
 
-const countrySalaries = [{ country: "US", employee_count: 5, min_salary: 50000, max_salary: 120000, avg_salary: 85000 }];
-const jobTitleSalaries = [{ job_title: "Engineer", country: "US", employee_count: 3, avg_salary: 90000 }];
+const countrySalaries = [
+  { country: "US", employee_count: 5, min_salary: 50000, max_salary: 120000, avg_salary: 85000 },
+];
+const jobTitleSalaries = [
+  { job_title: "Engineer", country: "US", employee_count: 3, avg_salary: 90000 },
+];
 const percentiles = [{ country: "US", p25: 60000, p50: 80000, p75: 100000, p90: 115000 }];
 const topEarners = [{ id: 1, full_name: "Alice", job_title: "CTO", country: "US", salary: 300000 }];
 
 beforeEach(() => {
   mockApi.countrySalaries.mockResolvedValue({ data: countrySalaries });
-  mockApi.jobTitleSalaries.mockResolvedValue({ data: jobTitleSalaries, meta: { country_filter: null } });
+  mockApi.jobTitleSalaries.mockResolvedValue({
+    data: jobTitleSalaries,
+    meta: { country_filter: null },
+  });
   mockApi.salaryPercentiles.mockResolvedValue({ data: percentiles });
   mockApi.topEarners.mockResolvedValue({ data: topEarners });
 });

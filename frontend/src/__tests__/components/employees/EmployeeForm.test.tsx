@@ -65,9 +65,7 @@ describe("EmployeeForm", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /update/i }));
 
-    await waitFor(() =>
-      expect(screen.getByText("Salary is too low")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByText("Salary is too low")).toBeInTheDocument());
   });
 
   it("disables the submit button while submitting", async () => {

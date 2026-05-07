@@ -3,8 +3,20 @@ import CountrySalaryTable from "@/components/insights/CountrySalaryTable";
 import type { CountrySalary } from "@/types";
 
 const data: CountrySalary[] = [
-  { country: "Germany", employee_count: 10, min_salary: 50000, max_salary: 120000, avg_salary: 80000 },
-  { country: "United States", employee_count: 25, min_salary: 60000, max_salary: 200000, avg_salary: 110000 },
+  {
+    country: "Germany",
+    employee_count: 10,
+    min_salary: 50000,
+    max_salary: 120000,
+    avg_salary: 80000,
+  },
+  {
+    country: "United States",
+    employee_count: 25,
+    min_salary: 60000,
+    max_salary: 200000,
+    avg_salary: 110000,
+  },
 ];
 
 describe("CountrySalaryTable", () => {

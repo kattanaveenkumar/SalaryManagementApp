@@ -43,7 +43,9 @@ describe("EmployeeTable", () => {
 
   it("renders multiple employees", () => {
     const second: Employee = { ...employee, id: 2, full_name: "Bob Smith" };
-    render(<EmployeeTable employees={[employee, second]} onEdit={jest.fn()} onDelete={jest.fn()} />);
+    render(
+      <EmployeeTable employees={[employee, second]} onEdit={jest.fn()} onDelete={jest.fn()} />,
+    );
     expect(screen.getByText("Jane Doe")).toBeInTheDocument();
     expect(screen.getByText("Bob Smith")).toBeInTheDocument();
   });
