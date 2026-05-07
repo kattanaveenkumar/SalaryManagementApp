@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "==> Waiting for database..."
-until bundle exec rails runner "ActiveRecord::Base.connection.execute('SELECT 1')" 2>/dev/null; do
+until pg_isready -h "${DB_HOST:-localhost}" -p "${DB_PORT:-5432}" -U "${DB_USER:-postgres}" -q; do
   echo "    Database not ready — retrying in 2s"
   sleep 2
 done

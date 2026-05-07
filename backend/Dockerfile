@@ -14,13 +14,16 @@ RUN bundle config set --local without "development test" \
 FROM ruby:3.2.2-alpine AS runner
 WORKDIR /app
 
-RUN apk add --no-cache postgresql-client bash
+RUN apk add --no-cache postgresql-client bash tzdata
 
 RUN addgroup --system --gid 1001 rails \
  && adduser  --system --uid 1001 --ingroup rails rails
 
 COPY --from=gems /usr/local/bundle /usr/local/bundle
 COPY --chown=rails:rails . .
+
+RUN mkdir -p /app/tmp/pids /app/tmp/sockets /app/tmp/cache \
+ && chown -R rails:rails /app/tmp
 
 ENV RAILS_ENV=production
 ENV RAILS_LOG_TO_STDOUT=1
