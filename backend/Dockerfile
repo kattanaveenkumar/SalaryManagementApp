@@ -14,7 +14,7 @@ RUN bundle config set --local without "development test" \
 FROM ruby:3.2.2-alpine AS runner
 WORKDIR /app
 
-RUN apk add --no-cache postgresql-client bash tzdata
+RUN apk add --no-cache postgresql-client bash tzdata curl
 
 RUN addgroup --system --gid 1001 rails \
  && adduser  --system --uid 1001 --ingroup rails rails
