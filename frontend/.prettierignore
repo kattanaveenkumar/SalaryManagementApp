@@ -4,3 +4,5 @@ out/
 coverage/
 *.min.js
 public/
+test-results/
+playwright-report/
