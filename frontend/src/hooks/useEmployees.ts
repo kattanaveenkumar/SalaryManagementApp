@@ -2,19 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { employeeApi } from "@/services/api";
-import type {
-  Employee,
-  EmployeeFilters,
-  EmployeeFormData,
-  PaginationMeta,
-} from "@/types";
+import type { Employee, EmployeeFilters, EmployeeFormData, PaginationMeta } from "@/types";
 
 export function useEmployees() {
   const [filters, setFilters] = useState<EmployeeFilters>({
     page: 1,
     per_page: 25,
+    sort_by: "id",
+    sort_order: "asc",
   });
-  const [refreshKey, setRefreshKey] = useState(0);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,9 +32,7 @@ export function useEmployees() {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "Failed to load employees",
-          );
+          setError(err instanceof Error ? err.message : "Failed to load employees");
           setLoading(false);
         }
       });
@@ -46,9 +40,7 @@ export function useEmployees() {
     return () => {
       cancelled = true;
     };
-  }, [filters, refreshKey]);
-
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+  }, [filters]);
 
   const applyFilters = useCallback((partial: Partial<EmployeeFilters>) => {
     setFilters((prev) => ({ ...prev, ...partial, page: 1 }));
@@ -58,29 +50,29 @@ export function useEmployees() {
     setFilters((prev) => ({ ...prev, page }));
   }, []);
 
-  const createEmployee = useCallback(
-    async (data: EmployeeFormData) => {
-      await employeeApi.create(data);
-      refresh();
-    },
-    [refresh],
-  );
+  const toggleSort = useCallback((column: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      sort_by: column,
+      sort_order: prev.sort_by === column && prev.sort_order === "asc" ? "desc" : "asc",
+      page: 1,
+    }));
+  }, []);
 
-  const updateEmployee = useCallback(
-    async (id: number, data: Partial<EmployeeFormData>) => {
-      await employeeApi.update(id, data);
-      refresh();
-    },
-    [refresh],
-  );
+  const createEmployee = useCallback(async (data: EmployeeFormData) => {
+    await employeeApi.create(data);
+    setFilters((prev) => ({ ...prev }));
+  }, []);
 
-  const deleteEmployee = useCallback(
-    async (id: number) => {
-      await employeeApi.delete(id);
-      refresh();
-    },
-    [refresh],
-  );
+  const updateEmployee = useCallback(async (id: number, data: Partial<EmployeeFormData>) => {
+    await employeeApi.update(id, data);
+    setFilters((prev) => ({ ...prev }));
+  }, []);
+
+  const deleteEmployee = useCallback(async (id: number) => {
+    await employeeApi.delete(id);
+    setFilters((prev) => ({ ...prev }));
+  }, []);
 
   return {
     employees,
@@ -90,6 +82,7 @@ export function useEmployees() {
     filters,
     applyFilters,
     setPage,
+    toggleSort,
     createEmployee,
     updateEmployee,
     deleteEmployee,
